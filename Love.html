@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For You - Luana</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050005; /* Fondo casi negro */
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Montserrat', sans-serif;
+            color: white;
+            user-select: none;
+        }
+
+        /* --- PANTALLA DE INICIO (INTRO) --- */
+        #intro-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            cursor: pointer;
+            transition: opacity 1s ease-out;
+        }
+
+        .heart-btn {
+            font-size: 4rem;
+            color: #ff0040;
+            animation: beat 1s infinite;
+            text-shadow: 0 0 20px #ff0040;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .arrow {
+            position: absolute;
+            font-size: 5rem;
+            color: #fff;
+            opacity: 0.8;
+            pointer-events: none;
+            transform: rotate(-45deg);
+        }
+
+        .click-text {
+            margin-top: 20px;
+            font-family: 'Great Vibes', cursive;
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 0 0 10px #fff;
+        }
+
+        /* --- CONTENIDO PRINCIPAL --- */
+        #main-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 0 50px 0;
+            box-sizing: border-box;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 2s ease-in;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Textos Superiores (Agrandados) */
+        .header-text {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .cursive-title {
+            font-family: 'Great Vibes', cursive;
+            font-size: 5.5rem; 
+            margin: 0;
+            color: #ffccdd;
+            text-shadow: 0 0 15px #ff0055, 0 0 30px #ff0055;
+            line-height: 1.1;
+        }
+
+        /* Textos Inferiores */
+        .footer-text {
+            text-align: center;
+        }
+
+        .big-name {
+            font-family: 'Great Vibes', cursive;
+            font-size: 5.5rem;
+            margin: 0;
+            background: linear-gradient(to bottom, #fff, #ff6699);
+            -webkit-background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 0 10px #ff0040);
+        }
+
+        .date-text {
+            font-size: 1.2rem;
+            letter-spacing: 5px;
+            color: #ccc;
+            margin-top: 5px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            padding-top: 10px;
+            display: inline-block;
+        }
+
+        @keyframes beat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        /* Ajustes Mobile */
+        @media (max-width: 768px) {
+            .cursive-title { font-size: 3.8rem; } 
+            .big-name { font-size: 4rem; }
+            #main-content { padding: 60px 0 80px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <div class="heart-btn">
+            ❤️
+            <div class="arrow">💘</div>
+        </div>
+        <div class="click-text">For You</div>
+    </div>
+
+    <div id="main-content">
+        <div class="header-text">
+            <div class="cursive-title">I Love You</div>
+            <div class="cursive-title">Princess</div>
+        </div>
+
+        <div class="footer-text">
+            <div class="big-name">Luana</div>
+            <div class="date-text">14 · 02 · 2026</div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const introScreen = document.getElementById('intro-screen');
+        const mainContent = document.getElementById('main-content');
+        
+        let width, height;
+        let animationRunning = false;
+
+        // Configuración
+        const HEART_NODES_COUNT = 1500; // Más puntos para que se vea denso y relleno
+        const RING_COUNT = 250;
+        const STAR_COUNT = 100;
+        const STAR_CONNECTION_DIST = 100;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        introScreen.addEventListener('click', () => {
+            introScreen.style.opacity = 0;
+            setTimeout(() => {
+                introScreen.style.display = 'none';
+                mainContent.style.opacity = 1;
+                animationRunning = true;
+                init();
+                animate();
+            }, 1000);
+        });
+
+        // --- UTILIDADES 3D ---
+        function project(x, y, z) {
+            const scale = 500 / (500 + z + 600);
+            const x2d = x * scale + width / 2;
+            const y2d = y * scale + height / 2;
+            return { x: x2d, y: y2d, scale: scale };
+        }
+
+        // --- CLASES ---
+
+        // 1. Clase Estrella (Fondo Constelaciones)
+        class Star {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.2;
+                this.vy = (Math.random() - 0.5) * 0.2;
+                this.size = Math.random() * 1.2;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if(this.x < 0) this.x = width; else if(this.x > width) this.x = 0;
+                if(this.y < 0) this.y = height; else if(this.y > height) this.y = 0;
+            }
+            draw(ctx) {
+                ctx.fillStyle = "rgba(255, 200, 220, 0.7)"; // Blanco rosado tenue
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        // 2. Clase Partícula (Corazón 3D Relleno y Aro)
+        class Particle {
+            constructor(type) {
+                this.type = type;
+                this.baseX = 0; this.baseY = 0; this.baseZ = 0;
+                this.rx = 0; this.ry = 0; this.rz = 0;
+                this.init();
+            }
+
+            init() {
+                if (this.type === 'heart') {
+                    // --- GENERACIÓN 3D RELLENA (FORMA REDONDA) ---
+                    // Usamos coordenadas esféricas aleatorias para llenar el volumen
+                    let phi = Math.random() * Math.PI * 2; // Ángulo alrededor Y
+                    let theta = Math.random() * Math.PI;     // Ángulo arriba/abajo
+
+                    // Ecuaciones de la FORMA del corazón de la imagen
+                    let u = phi;
+                    let v = theta;
+                    let s = 10; // Escala base
+
+                    // Fórmula de corazón 3D paramétrico
+                    let x_surf = 16 * Math.pow(Math.sin(u), 3) * Math.cos(v);
+                    let y_surf = 16 * Math.pow(Math.sin(u), 3) * Math.sin(v);
+                    let z_surf = (13 * Math.cos(u) - 5 * Math.cos(2*u) - 2 * Math.cos(3*u) - Math.cos(4*u));
+                    
+                    // --- RELLENO (VOLUMEN) ---
+                    // Multiplicamos la posición en la superficie por un factor aleatorio 'r' (0 a 1)
+                    // Usamos raíz cúbica para una distribución uniforme en el volumen 3D
+                    let r = Math.pow(Math.random(), 1/3); 
+
+                    this.baseX = x_surf * s * r;
+                    // Invertimos Y y ajustamos la posición para centrarlo
+                    this.baseY = (-z_surf * s * r) - 20; 
+                    this.baseZ = y_surf * s * r;
+                    
+                    this.size = Math.random() * 2 + 0.5;
+                    // Color ROSADO brillante para los puntos
+                    this.color = `rgba(255, ${100 + Math.random() * 155}, ${150 + Math.random() * 105}, ${Math.random() * 0.6 + 0.4})`;
+
+                } else if (this.type === 'ring') {
+                    // Aro inferior
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.radius = 180 + Math.random() * 120;
+                    this.speed = Math.random() * 0.02 + 0.01;
+                    this.baseY = 200; 
+                    this.color = `rgba(255, 80, 150, ${Math.random() * 0.5 + 0.3})`;
+                }
+            }
+
+            update(time, rotY) {
+                if (this.type === 'heart') {
+                    // Rotación 3D
+                    let cos = Math.cos(rotY); let sin = Math.sin(rotY);
+                    this.rx = this.baseX * cos - this.baseZ * sin;
+                    this.rz = this.baseZ * cos + this.baseX * sin;
+                    this.ry = this.baseY;
+                } else if (this.type === 'ring') {
+                    // Movimiento aro
+                    this.angle += this.speed;
+                    let x = Math.cos(this.angle) * this.radius;
+                    let z = Math.sin(this.angle) * this.radius;
+                    let cos = Math.cos(rotY * 0.3); let sin = Math.sin(rotY * 0.3);
+                    this.rx = x * cos - z * sin;
+                    this.rz = z * cos + x * sin;
+                    this.ry = this.baseY + Math.sin(time * 3 + this.angle*2) * 15;
+                }
+            }
+        }
+
+        // --- INICIALIZACIÓN ---
+        let heartParticles = [];
+        let ringParticles = [];
+        let stars = [];
+
+        function init() {
+            heartParticles = []; ringParticles = []; stars = [];
+            for(let i=0; i<HEART_NODES_COUNT; i++) heartParticles.push(new Particle('heart'));
+            for(let i=0; i<RING_COUNT; i++) ringParticles.push(new Particle('ring'));
+            for(let i=0; i<STAR_COUNT; i++) stars.push(new Star());
+        }
+
+        let time = 0;
+
+        function animate() {
+            if (!animationRunning) return;
+            ctx.clearRect(0, 0, width, height);
+            time += 0.01;
+            let rotY = time * 0.5;
+
+            // 1. DIBUJAR FONDO DE CONSTELACIONES
+            ctx.lineWidth = 0.2;
+            ctx.strokeStyle = "rgba(255, 200, 220, 0.15)"; // Líneas tenues rosadas
+            for (let i = 0; i < stars.length; i++) {
+                stars[i].update();
+                stars[i].draw(ctx);
+                // Conectar estrellas
+                for (let j = i + 1; j < stars.length; j++) {
+                    let dx = stars[i].x - stars[j].x;
+                    let dy = stars[i].y - stars[j].y;
+                    if (dx*dx + dy*dy < STAR_CONNECTION_DIST*STAR_CONNECTION_DIST) {
+                        ctx.beginPath();
+                        ctx.moveTo(stars[i].x, stars[i].y);
+                        ctx.lineTo(stars[j].x, stars[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // 2. ACTUALIZAR PARTÍCULAS 3D
+            [...heartParticles, ...ringParticles].forEach(p => p.update(time, rotY));
+
+            // 3. DIBUJAR PUNTOS 3D (Corazón y Aro)
+            ctx.globalCompositeOperation = 'lighter'; // Brillo acumulativo
+            
+            // Ordenar por profundidad Z para un 3D más correcto
+            [...heartParticles, ...ringParticles].sort((a, b) => b.rz - a.rz).forEach(p => {
+                let proj = project(p.rx, p.ry, p.rz);
+                if (proj.scale > 0) {
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    let size = (p.type === 'heart' ? p.size : 2) * proj.scale;
+                    ctx.arc(proj.x, proj.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over';
+
+            requestAnimationFrame(animate);
+        }
+        
+        function idle() { if(!animationRunning) requestAnimationFrame(idle); }
+        idle();
+
+    </script>
+</body>
+</html>
