@@ -201,7 +201,7 @@
         });
 
         bgMusic.ontimeupdate = () => {
-            if (bgMusic.duration - bgMusic.currentTime < 5) {
+            if (bgMusic.duration && bgMusic.duration - bgMusic.currentTime < 5) {
                 mainContent.style.opacity = 0;
                 endScreen.style.display = 'flex';
                 setTimeout(() => { endScreen.style.opacity = 1; }, 100);
@@ -213,9 +213,35 @@
             return { x: x * scale + width / 2, y: y * scale + height / 2, scale: scale };
         }
 
+        // --- ESTRELLAS DINÁMICAS (LUCES EN MOVIMIENTO) ---
         class Star {
-            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.size = Math.random() * 1.5; }
-            draw() { ctx.fillStyle = "rgba(255, 180, 220, 0.4)"; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill(); }
+            constructor() { 
+                this.x = Math.random() * width; 
+                this.y = Math.random() * height; 
+                this.size = Math.random() * 1.5; 
+            }
+            draw() { 
+                ctx.fillStyle = "rgba(255, 180, 220, 0.4)"; 
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); 
+                ctx.fill(); 
+            }
+        }
+
+        // --- ESTRELLAS FIJAS (ESTRUCTURA DEL UNIVERSO) ---
+        class StaticStar {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 0.7;
+                this.opacity = 0.15 + Math.random() * 0.4;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         class HeartParticle {
@@ -261,7 +287,6 @@
                 let p = project(this.x * cos - this.z * sin, this.y, this.z * cos + this.x * sin);
                 if(p.scale > 0) {
                     ctx.save();
-                    // ROSA TENUE: Filtro ajustado con menos saturación y más suavidad
                     ctx.filter = `sepia(1) saturate(1.5) hue-rotate(290deg) brightness(1.2) opacity(${this.life * 0.7})`;
                     ctx.font = `${25 * this.scale * p.scale}px serif`;
                     ctx.textAlign = "center"; ctx.fillText("❤️", p.x, p.y); ctx.restore();
@@ -285,20 +310,50 @@
             draw() { let p = project(this.rx, this.ry, this.rz); if(p.scale > 0) { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(p.x, p.y, 3 * p.scale, 0, Math.PI*2); ctx.fill(); } }
         }
 
-        let heartParticles = [], vortexParticles = [], miniHearts = [], stars = [], heartFullyFormed = false;
+        let heartParticles = [], vortexParticles = [], miniHearts = [], stars = [], staticStars = [], heartFullyFormed = false;
 
         function init() {
+            heartParticles = []; vortexParticles = []; stars = []; staticStars = []; miniHearts = [];
             for(let i=0; i<HEART_COUNT; i++) heartParticles.push(new HeartParticle());
             for(let i=0; i<500; i++) vortexParticles.push(new VortexParticle());
             for(let i=0; i<40; i++) miniHearts.push(new MiniHeart());
-            for(let i=0; i<130; i++) stars.push(new Star());
+            for(let i=0; i<150; i++) stars.push(new Star());
+            for(let i=0; i<400; i++) staticStars.push(new StaticStar());
         }
 
         function animate() {
             if (!animationRunning) return;
             ctx.clearRect(0, 0, width, height);
             let now = Date.now(), time = (now - startTime) / 1000, rotY = time * 0.5;
-            stars.forEach(s => s.draw());
+            
+            // 1. DIBUJAR CONSTELACIONES FIJAS (PEQUEÑAS FIGURAS)
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.lineWidth = 0.4;
+            staticStars.forEach((s, idx) => {
+                s.draw();
+                // Crea figuras triangulares fijas cada 10 estrellas
+                if (idx % 10 === 0 && idx < staticStars.length - 2) {
+                    ctx.beginPath();
+                    ctx.moveTo(s.x, s.y);
+                    ctx.lineTo(staticStars[idx+1].x, staticStars[idx+1].y);
+                    ctx.lineTo(staticStars[idx+2].x, staticStars[idx+2].y);
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            });
+
+            // 2. DIBUJAR CONSTELACIONES DINÁMICAS (LÍNEAS TENUES)
+            ctx.strokeStyle = "rgba(255, 100, 180, 0.08)";
+            ctx.lineWidth = 0.6;
+            stars.forEach((s, idx) => {
+                s.draw();
+                if (idx < stars.length - 1 && Math.random() > 0.97) {
+                    ctx.beginPath(); ctx.moveTo(s.x, s.y);
+                    ctx.lineTo(stars[idx + 1].x, stars[idx + 1].y);
+                    ctx.stroke();
+                }
+            });
+
             ctx.globalCompositeOperation = 'lighter';
             vortexParticles.forEach(p => { p.update(time); p.draw(); });
             let allFormed = true;
