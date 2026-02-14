@@ -200,9 +200,7 @@
             }, 1000);
         });
 
-        // Monitor de finalización de audio
         bgMusic.ontimeupdate = () => {
-            // Activar mensaje de cierre 5 segundos antes de que termine el audio
             if (bgMusic.duration - bgMusic.currentTime < 5) {
                 mainContent.style.opacity = 0;
                 endScreen.style.display = 'flex';
@@ -249,43 +247,24 @@
             }
         }
 
-                class MiniHeart {
-            constructor() {
-                this.reset();
-            }
+        class MiniHeart {
+            constructor() { this.reset(); }
             reset() {
-                this.x = 0;
-                this.y = VORTEX_Y;
-                this.z = 0;
-                let phi = Math.random() * Math.PI * 2;
-                let theta = Math.random() * Math.PI;
-                let force = 2 + Math.random() * 3;
-                this.vx = force * Math.sin(theta) * Math.cos(phi);
-                this.vy = force * Math.cos(theta) - 1.5; 
-                this.vz = force * Math.sin(theta) * Math.sin(phi);
-                this.life = 1.0;
-                this.decay = 0.007 + Math.random() * 0.01;
-                this.scale = 0.2 + Math.random() * 0.3;
+                this.x = (Math.random() - 0.5) * 100; this.y = VORTEX_Y; this.z = (Math.random() - 0.5) * 100;
+                let phi = Math.random() * Math.PI * 2, theta = Math.random() * Math.PI, force = 2 + Math.random() * 4;
+                this.vx = force * Math.sin(theta) * Math.cos(phi); this.vy = -Math.abs(force * Math.cos(theta)) - 1.5; this.vz = force * Math.sin(theta) * Math.sin(phi);
+                this.life = 1.0; this.decay = 0.005 + Math.random() * 0.01; this.scale = 0.15 + Math.random() * 0.25;
             }
-            update() {
-                this.x += this.vx; this.y += this.vy; this.z += this.vz;
-                this.life -= this.decay;
-                if(this.life <= 0) this.reset();
-            }
-            draw(ctx, rotY) {
-                let cos = Math.cos(rotY); let sin = Math.sin(rotY);
-                let rx = this.x * cos - this.z * sin;
-                let rz = this.z * cos + this.x * sin;
-                let p = project(rx, this.y, rz);
+            update() { this.x += this.vx; this.y += this.vy; this.z += this.vz; this.life -= this.decay; if(this.life <= 0) this.reset(); }
+            draw(rotY) {
+                let cos = Math.cos(rotY), sin = Math.sin(rotY);
+                let p = project(this.x * cos - this.z * sin, this.y, this.z * cos + this.x * sin);
                 if(p.scale > 0) {
                     ctx.save();
-                    // --- TRUCO DE FILTRO PARA FORZAR ROSADO PÁLIDO SOBRE EMOJI ---
-                    // sepia(1) lo vuelve amarillento, hue-rotate lo lleva al rosa, saturate lo aviva
-                    ctx.filter = `sepia(1) saturate(5) hue-rotate(280deg) opacity(${this.life})`;
-                    ctx.font = `${20 * this.scale * p.scale}px serif`;
-                    ctx.textAlign = "center";
-                    ctx.fillText("❤️", p.x, p.y);
-                    ctx.restore();
+                    // ROSA TENUE: Filtro ajustado con menos saturación y más suavidad
+                    ctx.filter = `sepia(1) saturate(1.5) hue-rotate(290deg) brightness(1.2) opacity(${this.life * 0.7})`;
+                    ctx.font = `${25 * this.scale * p.scale}px serif`;
+                    ctx.textAlign = "center"; ctx.fillText("❤️", p.x, p.y); ctx.restore();
                 }
             }
         }
@@ -330,7 +309,6 @@
             ctx.globalCompositeOperation = 'source-over';
             requestAnimationFrame(animate);
         }
-        init();
     </script>
 </body>
 </html>
