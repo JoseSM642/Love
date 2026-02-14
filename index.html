@@ -21,7 +21,7 @@
             user-select: none;
         }
 
-        #intro-screen {
+        #intro-screen, #end-screen {
             position: absolute;
             top: 0;
             left: 0;
@@ -34,7 +34,14 @@
             align-items: center;
             z-index: 100;
             cursor: pointer;
-            transition: opacity 1s ease-out;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        #end-screen {
+            z-index: 150;
+            display: none;
+            opacity: 0;
+            pointer-events: none;
         }
 
         .heart-btn {
@@ -57,12 +64,13 @@
             transform: rotate(-45deg);
         }
 
-        .click-text {
+        .click-text, .end-text {
             margin-top: 20px;
             font-family: 'Great Vibes', cursive;
             font-size: 2.5rem;
             color: #fff;
             text-shadow: 0 0 10px #fff;
+            text-align: center;
         }
 
         #main-content {
@@ -90,8 +98,6 @@
             z-index: 1;
         }
 
-        .header-text { text-align: center; }
-        
         .cursive-title {
             font-family: 'Great Vibes', cursive;
             font-size: 4.5rem; 
@@ -99,13 +105,9 @@
             color: #ffccdd;
             text-shadow: 0 0 20px #ff0055, 0 0 40px #ff0055;
             line-height: 1.1;
+            text-align: center;
         }
 
-        .footer-text { 
-            text-align: center;
-            margin-top: auto; 
-        }
-        
         .big-name {
             font-family: 'Great Vibes', cursive;
             font-size: 3.5rem; 
@@ -114,6 +116,7 @@
             -webkit-background-clip: text;
             color: transparent;
             filter: drop-shadow(0 0 15px #ff0055);
+            text-align: center;
         }
 
         .date-text {
@@ -134,22 +137,23 @@
         @media (max-width: 768px) {
             .cursive-title { font-size: 2.8rem; } 
             .big-name { font-size: 2.8rem; }
-            #main-content { padding: 60px 0 60px 0; }
         }
     </style>
 </head>
 <body>
 
-    <audio id="bg-music" loop>
-        <source id="audio-source" src="TU_URL_DE_AUDIO_AQUI" type="audio/mpeg">
+    <audio id="bg-music">
+        <source src="musica.mp3" type="audio/mpeg">
     </audio>
 
     <div id="intro-screen">
-        <div class="heart-btn">
-            ❤️
-            <div class="arrow">💘</div>
-        </div>
+        <div class="heart-btn">❤️<div class="arrow">💘</div></div>
         <div class="click-text">For You</div>
+    </div>
+
+    <div id="end-screen">
+        <div class="heart-btn" style="animation: beat 2s infinite;">❤️</div>
+        <div class="end-text">You are so special...</div>
     </div>
 
     <div id="main-content">
@@ -157,8 +161,7 @@
             <div class="cursive-title">I Love You</div>
             <div class="cursive-title">Princess</div>
         </div>
-
-        <div class="footer-text">
+        <div style="text-align: center; margin-top: auto;">
             <div class="big-name">Luana Esmeralda</div>
             <div class="date-text">14 · 02 · 2026</div>
         </div>
@@ -170,17 +173,12 @@
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const introScreen = document.getElementById('intro-screen');
+        const endScreen = document.getElementById('end-screen');
         const mainContent = document.getElementById('main-content');
         const bgMusic = document.getElementById('bg-music');
 
-        let width, height;
-        let animationRunning = false;
-        let startTime = 0;
-
-        const VORTEX_Y = 320;       
-        const HEART_Y_CENTER = -70; 
-        const HEART_SIZE = 18;      
-        const HEART_COUNT = 5500;   
+        let width, height, animationRunning = false, startTime = 0;
+        const VORTEX_Y = 320, HEART_Y_CENTER = -70, HEART_SIZE = 18, HEART_COUNT = 5500;
 
         function resize() {
             width = canvas.width = window.innerWidth;
@@ -191,8 +189,7 @@
 
         introScreen.addEventListener('click', () => {
             introScreen.style.opacity = 0;
-            bgMusic.play().catch(e => console.log("Audio play deferred"));
-            
+            bgMusic.play();
             setTimeout(() => {
                 introScreen.style.display = 'none';
                 mainContent.style.opacity = 1;
@@ -203,27 +200,24 @@
             }, 1000);
         });
 
+        // Monitor de finalización de audio
+        bgMusic.ontimeupdate = () => {
+            // Activar mensaje de cierre 5 segundos antes de que termine el audio
+            if (bgMusic.duration - bgMusic.currentTime < 5) {
+                mainContent.style.opacity = 0;
+                endScreen.style.display = 'flex';
+                setTimeout(() => { endScreen.style.opacity = 1; }, 100);
+            }
+        };
+
         function project(x, y, z) {
-            const scale = 800 / (800 + z + 800); 
-            const x2d = x * scale + width / 2;
-            const y2d = y * scale + height / 2;
-            return { x: x2d, y: y2d, scale: scale };
+            const scale = 800 / (800 + z + 800);
+            return { x: x * scale + width / 2, y: y * scale + height / 2, scale: scale };
         }
 
-        function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
-
         class Star {
-            constructor() {
-                this.x = Math.random() * width;
-                this.y = Math.random() * height;
-                this.size = Math.random() * 1.5;
-            }
-            draw(ctx) {
-                ctx.fillStyle = "rgba(255, 180, 220, 0.4)";
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
-                ctx.fill();
-            }
+            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.size = Math.random() * 1.5; }
+            draw() { ctx.fillStyle = "rgba(255, 180, 220, 0.4)"; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill(); }
         }
 
         class HeartParticle {
@@ -231,96 +225,47 @@
                 let t = Math.random() * Math.PI * 2;
                 let hx = 16 * Math.pow(Math.sin(t), 3);
                 let hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
-                let r = Math.pow(Math.random(), 0.5); 
+                let r = Math.pow(Math.random(), 0.5);
                 let theta = Math.random() * Math.PI;
-                let bulgeScale = 8; 
-                let hz = Math.cos(theta) * bulgeScale * (1 - Math.pow(r - 1, 2));
-
-                this.targetX = hx * HEART_SIZE * r;
-                this.targetY = hy * HEART_SIZE * r + HEART_Y_CENTER;
-                this.targetZ = hz * HEART_SIZE * 0.5;
-
-                this.startX = (Math.random() - 0.5) * 5;
-                this.startY = VORTEX_Y;
-                this.startZ = (Math.random() - 0.5) * 5;
-
-                this.delay = Math.random() * 2000; 
-                this.duration = 2500 + Math.random() * 1500;
-                this.birthTime = 0;
-                this.size = 1.1 + Math.random() * 1.7;
-                this.color = `hsla(${335 + Math.random()*15}, 100%, 65%, 0.85)`;
+                let hz = Math.cos(theta) * 8 * (1 - Math.pow(r - 1, 2));
+                this.targetX = hx * HEART_SIZE * r; this.targetY = hy * HEART_SIZE * r + HEART_Y_CENTER; this.targetZ = hz * HEART_SIZE * 0.5;
+                this.startX = (Math.random() - 0.5) * 5; this.startY = VORTEX_Y; this.startZ = (Math.random() - 0.5) * 5;
+                this.delay = Math.random() * 2000; this.duration = 2500 + Math.random() * 1500; this.birthTime = 0;
+                this.size = 1.1 + Math.random() * 1.7; this.color = `hsla(${335 + Math.random()*15}, 100%, 65%, 0.85)`;
             }
-
             update(now, rotY) {
                 if (this.birthTime === 0) this.birthTime = startTime + this.delay;
-                let progress = (now - this.birthTime) / this.duration;
-                if (progress < 0) progress = 0; 
-                if (progress > 1) progress = 1;
-
-                let ease = easeOutCubic(progress);
-                let curX = this.startX + (this.targetX - this.startX) * ease;
-                let curY = this.startY + (this.targetY - this.startY) * ease;
-                let curZ = this.startZ + (this.targetZ - this.startZ) * ease;
-
-                let cos = Math.cos(rotY);
-                let sin = Math.sin(rotY);
-                this.rx = curX * cos - curZ * sin;
-                this.rz = curZ * cos + curX * sin;
-                this.ry = curY;
+                let progress = Math.min(1, (now - this.birthTime) / this.duration);
+                if (progress < 0) progress = 0;
+                let ease = 1 - Math.pow(1 - progress, 3);
+                let cx = this.startX + (this.targetX - this.startX) * ease, cy = this.startY + (this.targetY - this.startY) * ease, cz = this.startZ + (this.targetZ - this.startZ) * ease;
+                let cos = Math.cos(rotY), sin = Math.sin(rotY);
+                this.rx = cx * cos - cz * sin; this.rz = cz * cos + cx * sin; this.ry = cy;
                 return progress >= 1;
             }
-
-            draw(ctx) {
-                let proj = project(this.rx, this.ry, this.rz);
-                if (proj.scale > 0) {
-                    ctx.fillStyle = this.color;
-                    ctx.beginPath();
-                    ctx.arc(proj.x, proj.y, this.size * proj.scale, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+            draw() {
+                let p = project(this.rx, this.ry, this.rz);
+                if (p.scale > 0) { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(p.x, p.y, this.size * p.scale, 0, Math.PI * 2); ctx.fill(); }
             }
         }
 
         class MiniHeart {
-            constructor() {
-                this.reset();
-            }
+            constructor() { this.reset(); }
             reset() {
-                // Nacimiento en un punto aleatorio del ancho del vórtice
-                this.x = (Math.random() - 0.5) * 100;
-                this.y = VORTEX_Y;
-                this.z = (Math.random() - 0.5) * 100;
-                
-                let phi = Math.random() * Math.PI * 2;
-                let theta = Math.random() * Math.PI;
-                let force = 2 + Math.random() * 4;
-                
-                this.vx = force * Math.sin(theta) * Math.cos(phi);
-                this.vy = -Math.abs(force * Math.cos(theta)) - 1.5; 
-                this.vz = force * Math.sin(theta) * Math.sin(phi);
-                
-                this.life = 1.0;
-                this.decay = 0.005 + Math.random() * 0.01;
-                this.scale = 0.15 + Math.random() * 0.25;
+                this.x = (Math.random() - 0.5) * 100; this.y = VORTEX_Y; this.z = (Math.random() - 0.5) * 100;
+                let phi = Math.random() * Math.PI * 2, theta = Math.random() * Math.PI, force = 2 + Math.random() * 4;
+                this.vx = force * Math.sin(theta) * Math.cos(phi); this.vy = -Math.abs(force * Math.cos(theta)) - 1.5; this.vz = force * Math.sin(theta) * Math.sin(phi);
+                this.life = 1.0; this.decay = 0.005 + Math.random() * 0.01; this.scale = 0.15 + Math.random() * 0.25;
             }
-            update() {
-                this.x += this.vx; this.y += this.vy; this.z += this.vz;
-                this.life -= this.decay;
-                if(this.life <= 0) this.reset();
-            }
-            draw(ctx, rotY) {
-                let cos = Math.cos(rotY); let sin = Math.sin(rotY);
-                let rx = this.x * cos - this.z * sin;
-                let rz = this.z * cos + this.x * sin;
-                let p = project(rx, this.y, rz);
+            update() { this.x += this.vx; this.y += this.vy; this.z += this.vz; this.life -= this.decay; if(this.life <= 0) this.reset(); }
+            draw(rotY) {
+                let cos = Math.cos(rotY), sin = Math.sin(rotY);
+                let p = project(this.x * cos - this.z * sin, this.y, this.z * cos + this.x * sin);
                 if(p.scale > 0) {
                     ctx.save();
-                    // Filtro forzado para ROSADO PÁLIDO (Hue 310-330)
                     ctx.filter = `sepia(1) saturate(10) hue-rotate(290deg) opacity(${this.life})`;
                     ctx.font = `${25 * this.scale * p.scale}px serif`;
-                    ctx.textAlign = "center";
-                    ctx.fillText("❤️", p.x, p.y);
-                    ctx.restore();
+                    ctx.textAlign = "center"; ctx.fillText("❤️", p.x, p.y); ctx.restore();
                 }
             }
         }
@@ -328,44 +273,24 @@
         class VortexParticle {
             constructor() { this.reset(); }
             reset() {
-                this.angle = Math.random() * Math.PI * 2;
-                this.radius = 120 + Math.random() * 180; 
-                this.y = VORTEX_Y + (Math.random() - 0.5) * 40;
-                this.speed = 0.008 + Math.random() * 0.015; 
-                this.color = `hsla(${320 + Math.random()*30}, 100%, 75%, 0.25)`;
+                this.angle = Math.random() * Math.PI * 2; this.radius = 120 + Math.random() * 180; this.y = VORTEX_Y + (Math.random() - 0.5) * 40;
+                this.speed = 0.008 + Math.random() * 0.015; this.color = `hsla(${320 + Math.random()*30}, 100%, 75%, 0.25)`;
             }
             update(time) {
                 this.angle += this.speed;
-                let x = Math.cos(this.angle) * this.radius;
-                let z = Math.sin(this.angle) * this.radius;
-                let rotY = time * 0.15;
-                let cos = Math.cos(rotY); let sin = Math.sin(rotY);
-                this.rx = x * cos - z * sin;
-                this.rz = z * cos + x * sin;
+                let rotY = time * 0.15, cos = Math.cos(rotY), sin = Math.sin(rotY);
+                this.rx = (Math.cos(this.angle) * this.radius) * cos - (Math.sin(this.angle) * this.radius) * sin;
+                this.rz = (Math.sin(this.angle) * this.radius) * cos + (Math.cos(this.angle) * this.radius) * sin;
                 this.ry = this.y;
             }
-            draw(ctx) {
-                let proj = project(this.rx, this.ry, this.rz);
-                if(proj.scale > 0) {
-                    ctx.fillStyle = this.color;
-                    ctx.beginPath();
-                    ctx.arc(proj.x, proj.y, 3 * proj.scale, 0, Math.PI*2);
-                    ctx.fill();
-                }
-            }
+            draw() { let p = project(this.rx, this.ry, this.rz); if(p.scale > 0) { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(p.x, p.y, 3 * p.scale, 0, Math.PI*2); ctx.fill(); } }
         }
 
-        let heartParticles = [];
-        let vortexParticles = [];
-        let miniHearts = [];
-        let stars = [];
-        let heartFullyFormed = false;
+        let heartParticles = [], vortexParticles = [], miniHearts = [], stars = [], heartFullyFormed = false;
 
         function init() {
-            heartParticles = []; vortexParticles = []; stars = []; miniHearts = [];
             for(let i=0; i<HEART_COUNT; i++) heartParticles.push(new HeartParticle());
             for(let i=0; i<500; i++) vortexParticles.push(new VortexParticle());
-            // CANTIDAD AUMENTADA DE MINI CORAZONES
             for(let i=0; i<40; i++) miniHearts.push(new MiniHeart());
             for(let i=0; i<130; i++) stars.push(new Star());
         }
@@ -373,46 +298,19 @@
         function animate() {
             if (!animationRunning) return;
             ctx.clearRect(0, 0, width, height);
-            let now = Date.now();
-            let time = (now - startTime) / 1000;
-            let rotY = time * 0.5;
-
-            // Constelaciones
-            ctx.strokeStyle = "rgba(255, 100, 180, 0.15)";
-            ctx.lineWidth = 1.0;
-            stars.forEach(s => {
-                s.draw(ctx);
-                if (Math.random() > 0.99) {
-                    ctx.beginPath(); ctx.moveTo(s.x, s.y);
-                    let target = stars[Math.floor(Math.random()*stars.length)];
-                    ctx.lineTo(target.x, target.y); ctx.stroke();
-                }
-            });
-
+            let now = Date.now(), time = (now - startTime) / 1000, rotY = time * 0.5;
+            stars.forEach(s => s.draw());
             ctx.globalCompositeOperation = 'lighter';
-            vortexParticles.forEach(p => { p.update(time); p.draw(ctx); });
-
+            vortexParticles.forEach(p => { p.update(time); p.draw(); });
             let allFormed = true;
             heartParticles.sort((a, b) => b.rz - a.rz);
-            heartParticles.forEach(p => {
-                if (!p.update(now, rotY)) allFormed = false;
-                p.draw(ctx);
-            });
+            heartParticles.forEach(p => { if (!p.update(now, rotY)) allFormed = false; p.draw(); });
             heartFullyFormed = allFormed;
-
-            if (heartFullyFormed) {
-                miniHearts.forEach(m => {
-                    m.update();
-                    m.draw(ctx, rotY);
-                });
-            }
-
+            if (heartFullyFormed) { miniHearts.forEach(m => { m.update(); m.draw(rotY); }); }
             ctx.globalCompositeOperation = 'source-over';
             requestAnimationFrame(animate);
         }
-
-        function idle() { if(!animationRunning) requestAnimationFrame(idle); }
-        idle();
+        init();
     </script>
 </body>
 </html>
