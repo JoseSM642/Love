@@ -12,7 +12,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #050005; /* Fondo casi negro */
+            background-color: #050005;
             overflow: hidden;
             height: 100vh;
             width: 100vw;
@@ -21,7 +21,6 @@
             user-select: none;
         }
 
-        /* --- PANTALLA DE INICIO (INTRO) --- */
         #intro-screen {
             position: absolute;
             top: 0;
@@ -40,9 +39,9 @@
 
         .heart-btn {
             font-size: 4rem;
-            color: #ff0040;
+            color: #ff0055;
             animation: beat 1s infinite;
-            text-shadow: 0 0 20px #ff0040;
+            text-shadow: 0 0 30px #ff0055;
             position: relative;
             display: flex;
             justify-content: center;
@@ -66,7 +65,6 @@
             text-shadow: 0 0 10px #fff;
         }
 
-        /* --- CONTENIDO PRINCIPAL --- */
         #main-content {
             position: absolute;
             top: 0;
@@ -92,42 +90,35 @@
             z-index: 1;
         }
 
-        /* Textos Superiores (Agrandados) */
-        .header-text {
-            text-align: center;
-            margin-top: 10px;
-        }
-
+        .header-text { text-align: center; margin-top: 10px; }
+        
         .cursive-title {
             font-family: 'Great Vibes', cursive;
-            font-size: 5.5rem; 
+            font-size: 6rem; 
             margin: 0;
             color: #ffccdd;
-            text-shadow: 0 0 15px #ff0055, 0 0 30px #ff0055;
+            text-shadow: 0 0 20px #ff0055, 0 0 40px #ff0055;
             line-height: 1.1;
         }
 
-        /* Textos Inferiores */
-        .footer-text {
-            text-align: center;
-        }
-
+        .footer-text { text-align: center; }
+        
         .big-name {
             font-family: 'Great Vibes', cursive;
-            font-size: 5.5rem;
+            font-size: 6rem;
             margin: 0;
-            background: linear-gradient(to bottom, #fff, #ff6699);
+            background: linear-gradient(to bottom, #fff, #ff3388);
             -webkit-background-clip: text;
             color: transparent;
-            filter: drop-shadow(0 0 10px #ff0040);
+            filter: drop-shadow(0 0 15px #ff0055);
         }
 
         .date-text {
             font-size: 1.2rem;
             letter-spacing: 5px;
-            color: #ccc;
+            color: #ffbbcc;
             margin-top: 5px;
-            border-top: 1px solid rgba(255,255,255,0.3);
+            border-top: 1px solid rgba(255,100,150,0.5);
             padding-top: 10px;
             display: inline-block;
         }
@@ -137,10 +128,9 @@
             50% { transform: scale(1.15); }
         }
 
-        /* Ajustes Mobile */
         @media (max-width: 768px) {
-            .cursive-title { font-size: 3.8rem; } 
-            .big-name { font-size: 4rem; }
+            .cursive-title { font-size: 4rem; } 
+            .big-name { font-size: 4.5rem; }
             #main-content { padding: 60px 0 80px 0; }
         }
     </style>
@@ -178,11 +168,10 @@
         let width, height;
         let animationRunning = false;
 
-        // Configuración
-        const HEART_NODES_COUNT = 1500; // Más puntos para que se vea denso y relleno
-        const RING_COUNT = 250;
+        // --- CONFIGURACIÓN ---
+        const HEART_NODES_COUNT = 3500; // Alta densidad para marcar bordes
+        const RING_COUNT = 150; // Menos partículas pero con estela
         const STAR_COUNT = 100;
-        const STAR_CONNECTION_DIST = 100;
 
         function resize() {
             width = canvas.width = window.innerWidth;
@@ -202,7 +191,6 @@
             }, 1000);
         });
 
-        // --- UTILIDADES 3D ---
         function project(x, y, z) {
             const scale = 500 / (500 + z + 600);
             const x2d = x * scale + width / 2;
@@ -212,107 +200,151 @@
 
         // --- CLASES ---
 
-        // 1. Clase Estrella (Fondo Constelaciones)
         class Star {
             constructor() {
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
-                this.vx = (Math.random() - 0.5) * 0.2;
-                this.vy = (Math.random() - 0.5) * 0.2;
-                this.size = Math.random() * 1.2;
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                if(this.x < 0) this.x = width; else if(this.x > width) this.x = 0;
-                if(this.y < 0) this.y = height; else if(this.y > height) this.y = 0;
+                this.size = Math.random() * 1.5;
             }
             draw(ctx) {
-                ctx.fillStyle = "rgba(255, 200, 220, 0.7)"; // Blanco rosado tenue
+                ctx.fillStyle = "rgba(255, 150, 200, 0.6)";
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
                 ctx.fill();
             }
         }
 
-        // 2. Clase Partícula (Corazón 3D Relleno y Aro)
         class Particle {
             constructor(type) {
                 this.type = type;
                 this.baseX = 0; this.baseY = 0; this.baseZ = 0;
                 this.rx = 0; this.ry = 0; this.rz = 0;
+                this.history = []; // Para el efecto de estela del aro
                 this.init();
             }
 
             init() {
                 if (this.type === 'heart') {
-                    // --- GENERACIÓN 3D RELLENA (FORMA REDONDA) ---
-                    // Usamos coordenadas esféricas aleatorias para llenar el volumen
-                    let phi = Math.random() * Math.PI * 2; // Ángulo alrededor Y
-                    let theta = Math.random() * Math.PI;     // Ángulo arriba/abajo
+                    // --- FORMA DEL CORAZÓN (SOLO SUPERFICIE) ---
+                    // Al no usar un factor aleatorio de relleno, los puntos se quedan en la "cáscara"
+                    // Esto hace que los contornos se vean muy marcados al girar.
+                    let phi = Math.random() * Math.PI * 2;
+                    let theta = Math.random() * Math.PI;
 
-                    // Ecuaciones de la FORMA del corazón de la imagen
                     let u = phi;
                     let v = theta;
-                    let s = 10; // Escala base
+                    let s = 15; // Tamaño grande
 
-                    // Fórmula de corazón 3D paramétrico
+                    // Ecuación paramétrica
                     let x_surf = 16 * Math.pow(Math.sin(u), 3) * Math.cos(v);
                     let y_surf = 16 * Math.pow(Math.sin(u), 3) * Math.sin(v);
                     let z_surf = (13 * Math.cos(u) - 5 * Math.cos(2*u) - 2 * Math.cos(3*u) - Math.cos(4*u));
                     
-                    // --- RELLENO (VOLUMEN) ---
-                    // Multiplicamos la posición en la superficie por un factor aleatorio 'r' (0 a 1)
-                    // Usamos raíz cúbica para una distribución uniforme en el volumen 3D
-                    let r = Math.pow(Math.random(), 1/3); 
-
-                    this.baseX = x_surf * s * r;
-                    // Invertimos Y y ajustamos la posición para centrarlo
-                    this.baseY = (-z_surf * s * r) - 20; 
-                    this.baseZ = y_surf * s * r;
+                    this.baseX = x_surf * s;
+                    this.baseY = (-z_surf * s) - 40; // Centrado
+                    this.baseZ = y_surf * s;
                     
-                    this.size = Math.random() * 2 + 0.5;
-                    // Color ROSADO brillante para los puntos
-                    this.color = `rgba(255, ${100 + Math.random() * 155}, ${150 + Math.random() * 105}, ${Math.random() * 0.6 + 0.4})`;
+                    this.size = 1.2;
+                    // COLOR UNIFORME: Rosa Intenso (Hue 330)
+                    this.color = `hsla(330, 95%, 60%, 0.8)`;
 
                 } else if (this.type === 'ring') {
-                    // Aro inferior
+                    // Configuración del Anillo
                     this.angle = Math.random() * Math.PI * 2;
-                    this.radius = 180 + Math.random() * 120;
-                    this.speed = Math.random() * 0.02 + 0.01;
-                    this.baseY = 200; 
-                    this.color = `rgba(255, 80, 150, ${Math.random() * 0.5 + 0.3})`;
+                    this.radius = 220 + Math.random() * 100;
+                    this.speed = 0.03 + Math.random() * 0.02; // Más rápido para crear efecto
+                    this.baseY = 280; 
+                    // Color del anillo un poco más claro
+                    this.color = `hsla(320, 100%, 70%, 0.9)`;
                 }
             }
 
             update(time, rotY) {
                 if (this.type === 'heart') {
-                    // Rotación 3D
+                    // Rotación simple 3D
                     let cos = Math.cos(rotY); let sin = Math.sin(rotY);
                     this.rx = this.baseX * cos - this.baseZ * sin;
                     this.rz = this.baseZ * cos + this.baseX * sin;
                     this.ry = this.baseY;
+
                 } else if (this.type === 'ring') {
-                    // Movimiento aro
+                    // Movimiento orbital
                     this.angle += this.speed;
                     let x = Math.cos(this.angle) * this.radius;
                     let z = Math.sin(this.angle) * this.radius;
+                    
+                    // Rotación de cámara
                     let cos = Math.cos(rotY * 0.3); let sin = Math.sin(rotY * 0.3);
                     this.rx = x * cos - z * sin;
                     this.rz = z * cos + x * sin;
-                    this.ry = this.baseY + Math.sin(time * 3 + this.angle*2) * 15;
+                    
+                    // Oscilación vertical
+                    this.ry = this.baseY + Math.sin(time * 3 + this.angle) * 10;
+
+                    // --- SISTEMA DE ESTELA (TRAILS) ---
+                    // Guardamos las últimas 5 posiciones para dibujar una línea
+                    this.history.push({x: this.rx, y: this.ry, z: this.rz});
+                    if(this.history.length > 8) this.history.shift();
+                }
+            }
+
+            draw(ctx) {
+                // Dibujar Corazón (Puntos)
+                if (this.type === 'heart') {
+                    let proj = project(this.rx, this.ry, this.rz);
+                    if (proj.scale > 0) {
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(proj.x, proj.y, this.size * proj.scale, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } 
+                // Dibujar Anillo (Estelas / Efectos)
+                else if (this.type === 'ring') {
+                    if (this.history.length < 2) return;
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = this.color;
+                    ctx.lineCap = 'round';
+                    
+                    // Dibujamos una línea conectando el historial
+                    for(let i = 0; i < this.history.length; i++) {
+                        let p = this.history[i];
+                        let proj = project(p.x, p.y, p.z);
+                        if(proj.scale <= 0) continue;
+
+                        // Grosor variable según la antigüedad del punto (cola más fina)
+                        ctx.lineWidth = (i / this.history.length) * 3 * proj.scale;
+                        
+                        if(i === 0) ctx.moveTo(proj.x, proj.y);
+                        else ctx.lineTo(proj.x, proj.y);
+                    }
+                    ctx.stroke();
+                    
+                    // Dibujar cabeza brillante
+                    let head = this.history[this.history.length - 1];
+                    let headProj = project(head.x, head.y, head.z);
+                    if(headProj.scale > 0) {
+                        ctx.fillStyle = "#fff";
+                        ctx.beginPath();
+                        ctx.arc(headProj.x, headProj.y, 2 * headProj.scale, 0, Math.PI*2);
+                        ctx.fill();
+                    }
                 }
             }
         }
 
         // --- INICIALIZACIÓN ---
-        let heartParticles = [];
-        let ringParticles = [];
+        let particles = [];
         let stars = [];
 
         function init() {
-            heartParticles = []; ringParticles = []; stars = [];
-            for(let i=0; i<HEART_NODES_COUNT; i++) heartParticles.push(new Particle('heart'));
-            for(let i=0; i<RING_COUNT; i++) ringParticles.push(new Particle('ring'));
+            particles = []; stars = [];
+            // Crear corazón
+            for(let i=0; i<HEART_NODES_COUNT; i++) particles.push(new Particle('heart'));
+            // Crear anillo
+            for(let i=0; i<RING_COUNT; i++) particles.push(new Particle('ring'));
+            // Crear estrellas
             for(let i=0; i<STAR_COUNT; i++) stars.push(new Star());
         }
 
@@ -321,45 +353,36 @@
         function animate() {
             if (!animationRunning) return;
             ctx.clearRect(0, 0, width, height);
+            
             time += 0.01;
-            let rotY = time * 0.5;
+            // Rotación LENTA
+            let rotY = time * 0.1; 
 
-            // 1. DIBUJAR FONDO DE CONSTELACIONES
-            ctx.lineWidth = 0.2;
-            ctx.strokeStyle = "rgba(255, 200, 220, 0.15)"; // Líneas tenues rosadas
+            // 1. Fondo de Estrellas (con líneas tenues)
+            ctx.lineWidth = 0.1;
+            ctx.strokeStyle = "rgba(255, 100, 150, 0.1)";
             for (let i = 0; i < stars.length; i++) {
-                stars[i].update();
                 stars[i].draw(ctx);
-                // Conectar estrellas
-                for (let j = i + 1; j < stars.length; j++) {
-                    let dx = stars[i].x - stars[j].x;
-                    let dy = stars[i].y - stars[j].y;
-                    if (dx*dx + dy*dy < STAR_CONNECTION_DIST*STAR_CONNECTION_DIST) {
-                        ctx.beginPath();
-                        ctx.moveTo(stars[i].x, stars[i].y);
-                        ctx.lineTo(stars[j].x, stars[j].y);
-                        ctx.stroke();
-                    }
+                // Conexiones aleatorias simples
+                if(i < stars.length - 1 && Math.random() > 0.9) {
+                    ctx.beginPath();
+                    ctx.moveTo(stars[i].x, stars[i].y);
+                    ctx.lineTo(stars[i+1].x, stars[i+1].y);
+                    ctx.stroke();
                 }
             }
 
-            // 2. ACTUALIZAR PARTÍCULAS 3D
-            [...heartParticles, ...ringParticles].forEach(p => p.update(time, rotY));
-
-            // 3. DIBUJAR PUNTOS 3D (Corazón y Aro)
-            ctx.globalCompositeOperation = 'lighter'; // Brillo acumulativo
+            // 2. Dibujar Partículas con efecto de brillo
+            ctx.globalCompositeOperation = 'lighter';
             
-            // Ordenar por profundidad Z para un 3D más correcto
-            [...heartParticles, ...ringParticles].sort((a, b) => b.rz - a.rz).forEach(p => {
-                let proj = project(p.rx, p.ry, p.rz);
-                if (proj.scale > 0) {
-                    ctx.fillStyle = p.color;
-                    ctx.beginPath();
-                    let size = (p.type === 'heart' ? p.size : 2) * proj.scale;
-                    ctx.arc(proj.x, proj.y, size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+            // Ordenar por profundidad para que el 3D se vea sólido
+            particles.sort((a, b) => b.rz - a.rz);
+
+            particles.forEach(p => {
+                p.update(time, rotY);
+                p.draw(ctx);
             });
+
             ctx.globalCompositeOperation = 'source-over';
 
             requestAnimationFrame(animate);
